@@ -18,9 +18,11 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        // Always: the role/permission taxonomy the Authorization API is
-        // built on. Without it every authenticated route 403s.
+        // Always. The role/permission taxonomy the Authorization API is built
+        // on — without it every authenticated route 403s — and the demo
+        // accounts, which are the only way into a fresh checkout at all.
         $this->call(RolePermissionSeeder::class);
+        $this->call(DemoAccountsSeeder::class);
 
         foreach (self::OPTIONAL as $seeder) {
             if (class_exists($seeder)) {

@@ -17,6 +17,26 @@
 
 Options -Indexes -MultiViews
 
+<IfModule mod_headers.c>
+    # PHP advertises its exact version here, which is free reconnaissance for
+    # matching the host against known CVEs. Apache's own `Server` banner does
+    # the same but can only be trimmed from httpd.conf — set
+    # `ServerTokens Prod` and `ServerSignature Off` there on any real host.
+    # Both forms are needed: PHP writes this header into Apache's "onsuccess"
+    # table, which `Header always unset` does not touch, while error responses
+    # go through the "always" table. Dropping either one leaks the version on
+    # half the responses.
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+
+    # Responses are JSON, so never let a browser sniff some other type out of
+    # them. The one HTML page served here is Swagger UI, which has no reason
+    # to be framed by anybody.
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
 <IfModule !mod_rewrite.c>
     # Without mod_rewrite nothing below runs, and the project root would be
     # served as plain files — .env included. Refuse to serve anything.
