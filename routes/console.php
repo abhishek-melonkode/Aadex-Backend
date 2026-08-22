@@ -11,8 +11,17 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::job(new HoldBookingExpiryJob)->everyFiveMinutes();
-Schedule::job(new ZeroInventoryAlertJob)->hourly();
+// Jobs owned by later phases. `use` alone never autoloads, but `new` does —
+// so these are registered only when the phase that owns them is present.
+// Without the guard, a checkout without those modules dies during
+// `composer install` (package:discover loads this file).
+if (class_exists(HoldBookingExpiryJob::class)) {
+    Schedule::job(new HoldBookingExpiryJob)->everyFiveMinutes();
+}
+
+if (class_exists(ZeroInventoryAlertJob::class)) {
+    Schedule::job(new ZeroInventoryAlertJob)->hourly();
+}
 
 // Sanctum only *rejects* expired tokens at auth time; the rows stay in
 // personal_access_tokens forever unless pruned. Keep 7 days of expired

@@ -34,4 +34,23 @@ abstract class TestCase extends BaseTestCase
     {
         return $this->userWithRole('hotel_admin', ['hotel_id' => $hotel->id, ...$attributes]);
     }
+
+    /**
+     * Skip a test that exercises a module belonging to a later phase.
+     *
+     * A handover ships a slice of the codebase, so a checkout may legitimately
+     * not contain the Rooms or Super Admin modules. Tests written against
+     * those have to skip rather than fail — the machinery underneath them is
+     * covered independently by RoleMiddlewareTest and TenantScopeTest, which
+     * run against fixtures and therefore pass on every checkout.
+     *
+     * The class is passed as a string so that its absence can never break
+     * parsing of the calling test file.
+     */
+    protected function skipUnlessModulePresent(string $class, string $module): void
+    {
+        if (! class_exists($class)) {
+            $this->markTestSkipped("The {$module} module is not part of this checkout.");
+        }
+    }
 }
