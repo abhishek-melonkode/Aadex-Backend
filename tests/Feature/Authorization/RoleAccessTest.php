@@ -9,6 +9,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
+/**
+ * Drives the role gates through the real Super Admin, Chain and Property
+ * route groups. Those belong to later phases, so this suite skips on a
+ * checkout that doesn't include them — the same gates are proven against
+ * fixtures, on every checkout, by RoleMiddlewareTest.
+ */
 class RoleAccessTest extends TestCase
 {
     use RefreshDatabase;
@@ -16,6 +22,9 @@ class RoleAccessTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->skipUnlessModulePresent('App\Domain\Rooms\Models\RoomType', 'Rooms/Property');
+
         $this->seedRbac();
     }
 
@@ -127,18 +136,7 @@ class RoleAccessTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_the_seeded_role_taxonomy_matches_the_spec(): void
-    {
-        $this->assertSame(
-            ['super_admin', 'hotel_chain_admin', 'hotel_admin', 'staff', 'guest'],
-            Role::orderBy('id')->pluck('name')->all()
-        );
-
-        $this->assertGreaterThan(0, Role::findByName('super_admin')->permissions()->count());
-        $this->assertSame(0, Role::findByName('staff')->permissions()->count());
-        $this->assertTrue(Role::findByName('hotel_admin')->hasPermissionTo('bookings.cancel'));
-        $this->assertFalse(Role::findByName('hotel_admin')->hasPermissionTo('hotels.delete'));
-        $this->assertTrue(Role::findByName('hotel_chain_admin')->hasPermissionTo('hotels.create'));
-        $this->assertFalse(Role::findByName('hotel_chain_admin')->hasPermissionTo('bookings.cancel'));
-    }
+    // The seeded-taxonomy assertions moved to RoleMiddlewareTest: they depend
+    // on nothing but the seeder, so they must not be skipped along with the
+    // module-dependent tests above.
 }

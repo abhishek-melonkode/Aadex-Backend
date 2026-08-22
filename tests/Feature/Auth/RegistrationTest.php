@@ -75,6 +75,14 @@ class RegistrationTest extends TestCase
 
     public function test_super_admin_activation_approves_the_hotel_and_its_pending_admin(): void
     {
+        // The approval half of the signup flow lives in the Super Admin
+        // module. Registration itself, and the 403 that blocks a pending
+        // account from logging in, are covered above without it.
+        $this->skipUnlessModulePresent(
+            'App\Http\Controllers\Api\V1\SuperAdmin\HotelController',
+            'Super Admin'
+        );
+
         $this->postJson('/api/v1/auth/register', $this->payload())->assertCreated();
 
         $hotel = Hotel::where('name', 'Seaside Grand')->sole();
@@ -98,6 +106,11 @@ class RegistrationTest extends TestCase
 
     public function test_activation_does_not_resurrect_a_deliberately_deactivated_user(): void
     {
+        $this->skipUnlessModulePresent(
+            'App\Http\Controllers\Api\V1\SuperAdmin\HotelController',
+            'Super Admin'
+        );
+
         $hotel = Hotel::factory()->inactive()->create();
         $deactivated = $this->hotelAdminFor($hotel, ['status' => 'inactive']);
         $pending = $this->userWithRole('staff', ['hotel_id' => $hotel->id, 'status' => 'pending']);
