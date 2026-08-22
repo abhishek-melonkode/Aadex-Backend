@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost/Aadex-Backend/api/v1",
+            "url": "http://localhost/Aadexx-Backend/api/v1",
             "description": "API v1"
         }
     ],
