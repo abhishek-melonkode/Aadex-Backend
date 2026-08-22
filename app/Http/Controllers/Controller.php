@@ -20,7 +20,13 @@ use OpenApi\Attributes as OA;
     then click **Authorize** above and paste it as the bearer token.
     TEXT
 )]
-#[OA\Server(url: '/api/v1', description: 'API v1')]
+// Driven by L5_SWAGGER_CONST_HOST (config/l5-swagger.php `constants`), which
+// defaults to "{APP_URL}/api/v1". It must be absolute: a relative "/api/v1"
+// is resolved by Swagger UI against the origin only, so "Try it out" would
+// hit http://localhost/api/v1/... and miss the /Aadex-Backend prefix when the
+// app is served from a subdirectory under Apache. Set APP_URL to match how
+// you actually reach the app.
+#[OA\Server(url: L5_SWAGGER_CONST_HOST, description: 'API v1')]
 #[OA\SecurityScheme(
     securityScheme: 'sanctum',
     type: 'http',

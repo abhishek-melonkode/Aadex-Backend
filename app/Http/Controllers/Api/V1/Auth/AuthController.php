@@ -110,7 +110,18 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->string('email'))->first();
 
-        if (! $user || ! Hash::check($request->string('password'), $user->password)) {
+        if ($user === null) {
+            // Burn a comparable amount of work before answering. Returning
+            // early here would make "no such account" measurably faster than
+            // "wrong password", which leaks whether an address is registered
+            // despite the response body being identical. Hash::make uses the
+            // configured bcrypt cost, the same cost Hash::check would pay.
+            Hash::make($request->string('password')->toString());
+
+            return response()->json(['message' => 'Invalid credentials.'], 401);
+        }
+
+        if (! Hash::check($request->string('password'), $user->password)) {
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 

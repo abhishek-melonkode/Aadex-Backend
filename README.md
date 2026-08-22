@@ -63,11 +63,40 @@ php artisan l5-swagger:generate
 
 ## Running it
 
+Two options — pick one and set `APP_URL` in `.env` to match, since Swagger's
+"Try it out" and every generated URL are built from it.
+
+**Option A — Apache (XAMPP), no extra process.** Drop the project in `htdocs` and it just
+works: the root `.htaccess` and `index.php` shim forward every request into `public/`.
+
+```
+APP_URL=http://localhost/Aadex-Backend
+```
+
+The API is then at **http://localhost/Aadex-Backend/api/v1** — nothing to start, Apache
+serves it. Needs `mod_rewrite` and `AllowOverride All` on `htdocs`, both XAMPP defaults.
+
+**Option B — Laravel's built-in server.**
+
 ```bash
 php artisan serve
 ```
 
-The API is then at **http://127.0.0.1:8000/api/v1**.
+```
+APP_URL=http://localhost:8000
+```
+
+The API is then at **http://localhost:8000/api/v1**.
+
+After changing `APP_URL`, refresh the spec so Swagger points at the right host:
+
+```bash
+php artisan config:clear && composer docs
+```
+
+> On a real server, point the vhost `DocumentRoot` at `public/` and delete the root
+> `.htaccess` and `index.php`. They exist only so the project can live in a subdirectory
+> of `htdocs`; serving `public/` directly is stricter.
 
 Some features need extra long-running processes. Start whichever you need:
 

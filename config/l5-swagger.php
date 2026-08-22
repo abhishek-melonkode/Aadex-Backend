@@ -348,7 +348,16 @@ return [
          * Constants which can be used in annotations
          */
         'constants' => [
-            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://my-default-host.com'),
+            // The `servers` entry in the spec, and therefore the base URL
+            // Swagger UI's "Try it out" posts to. Defaults off APP_URL so it
+            // is correct for both `php artisan serve` (http://localhost:8000)
+            // and Apache in a subdirectory (http://localhost/Aadex-Backend)
+            // without a separate env var. Override only to point the docs at
+            // a different host than the app itself.
+            'L5_SWAGGER_CONST_HOST' => env(
+                'L5_SWAGGER_CONST_HOST',
+                rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1'
+            ),
         ],
     ],
 ];

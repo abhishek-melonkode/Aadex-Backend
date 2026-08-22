@@ -155,4 +155,36 @@ class LoginTest extends TestCase
             ->getJson('/api/v1/auth/me')
             ->assertStatus(401);
     }
+
+    public function test_an_unknown_email_still_pays_the_hashing_cost(): void
+    {
+        // Response bodies for "no such account" and "wrong password" are
+        // already identical; this guards the other half of the leak — that
+        // the unknown-account branch must not answer measurably sooner.
+        Hash::spy();
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'nobody@aadex.test',
+            'password' => 'secret123',
+        ])->assertStatus(401);
+
+        Hash::shouldHaveReceived('make')->once();
+    }
+
+    public function test_a_wrong_password_for_a_real_account_hashes_too(): void
+    {
+        $this->userWithRole('super_admin', [
+            'email' => 'super@aadex.test',
+            'password' => Hash::make('secret123'),
+        ]);
+
+        Hash::spy();
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'super@aadex.test',
+            'password' => 'wrong-password',
+        ])->assertStatus(401);
+
+        Hash::shouldHaveReceived('check')->once();
+    }
 }

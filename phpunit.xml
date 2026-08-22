@@ -19,6 +19,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Pinned to the bare origin. Tests build request URIs from APP_URL,
+             so a value carrying a subdirectory (e.g. http://localhost/Aadex-Backend,
+             which is what you set when serving from XAMPP's htdocs) would
+             prefix every test request with that path and 404 the entire suite. -->
+        <env name="APP_URL" value="http://localhost"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
