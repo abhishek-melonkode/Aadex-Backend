@@ -98,6 +98,18 @@ php artisan config:clear && composer docs
 > `.htaccess` and `index.php`. They exist only so the project can live in a subdirectory
 > of `htdocs`; serving `public/` directly is stricter.
 
+### Before it is reachable by anyone else
+
+| Change | Why |
+|---|---|
+| `APP_ENV=production`, `APP_DEBUG=false` | With debug on, every error response carries a stack trace and absolute filesystem paths, and Laravel's debug page renders environment values — the DB password included |
+| Vhost `DocumentRoot` → `public/`, then delete the root `.htaccess` and `index.php` | Keeps the project root out of the web root entirely |
+| `ServerTokens Prod` + `ServerSignature Off` in `httpd.conf` | Apache otherwise announces its exact version, PHP's and OpenSSL's. The root `.htaccess` already strips `X-Powered-By` and sets `nosniff`/`X-Frame-Options`/`Referrer-Policy` — move those header rules into the vhost, since that file goes away |
+| `L5_SWAGGER_GENERATE_ALWAYS=false` | Rebuilding the spec on every request is a local convenience |
+| Real `MAIL_*` credentials | While `MAIL_MAILER=log`, password-reset OTPs land in `storage/logs/laravel.log` instead of an inbox |
+| Fresh `REVERB_APP_*` values | `php artisan reverb:install` |
+| Review `SANCTUM_TOKEN_EXPIRATION` | Defaults to 7 days |
+
 Some features need extra long-running processes. Start whichever you need:
 
 ```bash
@@ -165,9 +177,14 @@ hotels and one user per role. Password for all of them is `password`:
 | `propertyadmin@aadex.test` | `hotel_admin` | Demo Grand Hotel |
 | `frontdesk@aadex.test` | `staff` | Demo Grand Hotel, `bookings.view` + `bookings.create` only |
 
-Demo Grand Hotel also gets 2 room types, 4 rooms and 2 rate plans — enough to exercise
-the quote to booking to check-in/check-out flow immediately. Demo Seaside Resort is
-deliberately left empty so it can serve as the "other tenant" fixture in isolation tests.
+These accounts are the only way in: the one public entry point, `POST /auth/register`,
+creates a `pending` account on purpose, and approving one needs the Super Admin module.
+Demo Seaside Resort is deliberately left without rooms or rates, so it doubles as the
+"other tenant" when checking cross-tenant isolation by hand.
+
+If the Rooms and Rate Engine modules are present, Demo Grand Hotel also gets 2 room types,
+4 rooms and 2 rate plans — enough to walk the quote → booking → check-in → check-out flow
+straight away. `DatabaseSeeder` skips that part when those modules aren't in the checkout.
 
 ---
 
