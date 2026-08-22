@@ -15,6 +15,11 @@ use Tests\TestCase;
  * Admin could fetch another hotel's record by guessing its id — even though
  * the list endpoint filtered it out correctly. `bootstrap/app.php` pins the
  * order; the by-id tests below are what fail if anyone unpins it.
+ *
+ * This suite proves it against the real Rooms/Property module, so it skips on
+ * a checkout that doesn't include that phase. TenantScopeTest proves the same
+ * ordering against a fixture model and runs everywhere — that one is the
+ * guard you must never delete.
  */
 class TenantIsolationTest extends TestCase
 {
@@ -23,6 +28,9 @@ class TenantIsolationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->skipUnlessModulePresent('App\Domain\Rooms\Models\Room', 'Rooms/Property');
+
         $this->seedRbac();
     }
 
