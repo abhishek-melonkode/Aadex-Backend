@@ -32,3 +32,7 @@ Thumbs.db
 /docs/
 README_bkp.md
 readme_bkp.md
+
+# Generated from the controller annotations + APP_URL, so its contents are
+# machine-specific. `composer setup` / `composer docs` rebuilds it.
+/storage/api-docs/
