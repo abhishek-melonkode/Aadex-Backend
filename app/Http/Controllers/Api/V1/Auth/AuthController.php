@@ -209,6 +209,11 @@ class AuthController extends Controller
 
         // Sign out every other device, but keep the caller signed in — a
         // routine password change shouldn't force an immediate re-login.
+        // Close their audit rows first: the FK is nulled on delete, so after
+        // the delete these rows can never be matched to a token again and
+        // would sit open forever, reporting devices as still signed in.
+        $revoked = $user->tokens()->whereKeyNot($currentTokenId)->pluck('id')->all();
+        LoginActivityLog::closeForTokens($revoked);
         $user->tokens()->whereKeyNot($currentTokenId)->delete();
 
         return response()->json(['message' => 'Password changed. Other devices have been signed out.']);
@@ -232,11 +237,21 @@ class AuthController extends Controller
         if ($user) {
             $otp = (string) random_int(100000, 999999);
 
-            PasswordResetOtp::create([
-                'email' => $email,
-                'otp' => $otp,
-                'expires_at' => now()->addMinutes(10),
-            ]);
+            DB::transaction(function () use ($email, $otp) {
+                // Burn any code still outstanding for this address. Without
+                // this, every request added another simultaneously-valid code,
+                // so N requests meant N chances for a guess to land — and an
+                // old code kept working even after a successful reset.
+                PasswordResetOtp::where('email', $email)
+                    ->whereNull('consumed_at')
+                    ->update(['consumed_at' => now()]);
+
+                PasswordResetOtp::create([
+                    'email' => $email,
+                    'otp' => $otp,
+                    'expires_at' => now()->addMinutes(10),
+                ]);
+            });
 
             $user->notify(new PasswordResetOtpNotification($otp));
         }
@@ -279,9 +294,22 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $email)->firstOrFail();
-        $user->forceFill(['password' => Hash::make($request->string('password'))])->save();
-        $otpRecord->update(['consumed_at' => now()]);
-        $user->tokens()->delete();
+
+        DB::transaction(function () use ($user, $email, $request) {
+            $user->forceFill(['password' => Hash::make($request->string('password'))])->save();
+
+            // Consume every outstanding code for this address, not just the
+            // one that was used — a reset must not leave a spare key behind.
+            PasswordResetOtp::where('email', $email)
+                ->whereNull('consumed_at')
+                ->update(['consumed_at' => now()]);
+
+            // Close the audit rows before deleting the tokens: the FK is
+            // nulled on delete, so afterwards these rows can never be matched
+            // and would stay "still signed in" forever.
+            LoginActivityLog::closeForTokens($user->tokens()->pluck('id')->all());
+            $user->tokens()->delete();
+        });
 
         return response()->json(['message' => 'Password reset successfully.']);
     }

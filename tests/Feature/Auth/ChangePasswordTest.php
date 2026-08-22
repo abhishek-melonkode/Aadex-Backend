@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Domain\Identity\Models\LoginActivityLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -124,5 +125,44 @@ class ChangePasswordTest extends TestCase
             'password' => 'brand-new-pass',
             'password_confirmation' => 'brand-new-pass',
         ])->assertStatus(401);
+    }
+
+    public function test_changing_the_password_closes_the_audit_row_of_the_devices_it_signs_out(): void
+    {
+        [$user, $token] = $this->loggedInUser();
+
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@hotel.test',
+            'password' => 'secret123',
+            'device_name' => 'phone',
+        ])->assertOk();
+
+        $this->assertSame(2, LoginActivityLog::where('user_id', $user->id)->whereNull('logged_out_at')->count());
+
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/v1/auth/change-password', [
+                'current_password' => 'secret123',
+                'password' => 'brand-new-pass',
+                'password_confirmation' => 'brand-new-pass',
+            ])->assertOk();
+
+        // The phone was signed out, so its row must be closed. The caller is
+        // still signed in, so exactly one row stays open. Before the fix the
+        // phone's row was orphaned (token_id nulled by the FK) and open
+        // forever, permanently misreporting that device as logged in.
+        $this->assertSame(
+            1,
+            LoginActivityLog::where('user_id', $user->id)->whereNull('logged_out_at')->count()
+        );
+        $this->assertSame(
+            0,
+            LoginActivityLog::where('user_id', $user->id)
+                ->whereNull('logged_out_at')
+                ->whereNull('personal_access_token_id')
+                ->count(),
+            'No audit row may be left open with its token already deleted.'
+        );
     }
 }

@@ -125,8 +125,10 @@ class SessionController extends Controller
      */
     private function activityFor(array $tokenIds): Collection
     {
+        // Ascending, so that if a token somehow has more than one login row
+        // keyBy() keeps the newest — descending would leave the oldest.
         return LoginActivityLog::whereIn('personal_access_token_id', $tokenIds)
-            ->latest('id')
+            ->oldest('id')
             ->get()
             ->keyBy('personal_access_token_id');
     }

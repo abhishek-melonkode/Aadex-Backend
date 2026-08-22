@@ -157,6 +157,15 @@ the single source of truth is [`database/seeders/RolePermissionSeeder.php`](data
 Controllers reference permissions by name via `permission:` middleware — never invent a
 new permission string inline, add it to the seeder.
 
+### Rate limiting
+
+Laravel's `api` middleware group has throttling **off** by default; `bootstrap/app.php`
+turns it on and `AppServiceProvider::registerRateLimiters()` defines the limits: 60/min
+across the API, and tighter ones on the brute-force surface — login 5/min, forgot-password
+3/min, reset-password 6/min, register 5/min. The auth limiters are keyed by email+IP *and*
+by IP, so locking one account doesn't lock every account behind that IP, while one client
+spraying guesses across many accounts is still caught.
+
 ### Sessions and token expiry
 
 A session is one Sanctum token — one login on one device. Tokens expire after

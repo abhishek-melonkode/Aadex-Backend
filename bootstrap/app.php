@@ -21,6 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Laravel's `api` group ships with no rate limiting at all — it is
+        // opt-in. Without this, every endpoint (login included) accepts
+        // unlimited requests. The `api` limiter is defined in
+        // AppServiceProvider, alongside the tighter per-endpoint auth ones.
+        $middleware->throttleApi();
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
