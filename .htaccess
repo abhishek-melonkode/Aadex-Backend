@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------------------
+# Run this API from Apache (XAMPP) without `php artisan serve`.
+#
+#   http://localhost/Aadex-Backend/up
+#   http://localhost/Aadex-Backend/api/v1/auth/login
+#   http://localhost/Aadex-Backend/api/documentation
+#
+# Works together with the root index.php shim — see the comment in that file
+# for why the entry point is here rather than a plain rewrite into public/.
+#
+# Needs mod_rewrite and `AllowOverride All` on htdocs (both XAMPP defaults).
+# Has no effect on `php artisan serve`, which never reads .htaccess.
+#
+# ON A REAL SERVER: point the vhost DocumentRoot at public/ and delete this
+# file along with the root index.php.
+# ---------------------------------------------------------------------------
+
+Options -Indexes -MultiViews
+
+<IfModule !mod_rewrite.c>
+    # Without mod_rewrite nothing below runs, and the project root would be
+    # served as plain files — .env included. Refuse to serve anything.
+    Require all denied
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Some Apache/PHP combinations drop these before PHP sees them, which
+    # breaks Bearer-token auth. Must come before any [L] rule.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # The only real files served straight off disk. Everything else — .env,
+    # composer.json, app/, vendor/, .git/ — falls through to the catch-all
+    # below and is handled by PHP, never returned as a file.
+    # Add entries here if the project ever ships built front-end assets.
+    RewriteRule ^(favicon\.ico|robots\.txt)$ public/$1 [L]
+
+    # Everything else goes through the front controller.
+    RewriteCond %{REQUEST_URI} !/index\.php$
+    RewriteRule ^ index.php [L]
+</IfModule>
