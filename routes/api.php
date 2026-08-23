@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     require __DIR__.'/api_v1_auth.php';
+    require __DIR__.'/api_v1_users.php';
 
     /*
      * Route files belonging to later phases. Each module ships with its own
