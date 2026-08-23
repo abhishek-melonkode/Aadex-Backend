@@ -85,13 +85,31 @@ class RoleAccessTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
-    public function test_a_super_admin_cannot_use_property_routes_reserved_for_hotel_roles(): void
+    public function test_areas_are_gated_by_permission_not_by_role_name(): void
     {
-        // Role middleware is `role:hotel_admin|staff` — a Super Admin manages
-        // properties through /super-admin, not by borrowing the property area.
-        $this->actingAs($this->userWithRole('super_admin'), 'sanctum')
-            ->getJson('/api/v1/property/rooms')
-            ->assertStatus(403);
+        // Route groups used to carry a hardcoded `role:hotel_admin|staff`
+        // list, which meant a role created at runtime could never reach them
+        // however many permissions it held. Each area now gates on a
+        // permission instead, so access follows the grant.
+        $superAdmin = $this->userWithRole('super_admin');
+
+        // Holds every permission, so every area is open — including the
+        // property one it previously could not touch.
+        $this->actingAs($superAdmin, 'sanctum')->getJson('/api/v1/property/rooms')->assertOk();
+        $this->actingAs($superAdmin, 'sanctum')->getJson('/api/v1/chain/hotels')->assertOk();
+        $this->actingAs($superAdmin, 'sanctum')->getJson('/api/v1/super-admin/hotels')->assertOk();
+
+        // The Super Admin area needs its own permission, because it acts on
+        // the same resources with the same verbs as the Chain area — a Chain
+        // Admin holds `hotels.view` too, so that alone could not separate them.
+        $chain = HotelChain::factory()->create();
+        $chainAdmin = $this->userWithRole('hotel_chain_admin', ['chain_id' => $chain->id]);
+
+        $this->assertTrue($chainAdmin->can('hotels.view'));
+        $this->assertFalse($chainAdmin->can('platform.administer'));
+
+        $this->actingAs($chainAdmin, 'sanctum')->getJson('/api/v1/chain/hotels')->assertOk();
+        $this->actingAs($chainAdmin, 'sanctum')->getJson('/api/v1/super-admin/hotels')->assertStatus(403);
     }
 
     public function test_staff_only_get_the_permissions_their_hotel_admin_granted(): void

@@ -62,6 +62,10 @@ return [
                     // logout-all.
                     base_path('app/Http/Controllers/Api/V1/Auth'),
 
+                    // Authorization API: user management, the per-user
+                    // permission matrix, and runtime role/permission CRUD.
+                    base_path('app/Http/Controllers/Api/V1/Users'),
+
                     // --- Held back until the relevant phase is handed over ---
                     // base_path('app/Http/Controllers/Api/V1/SuperAdmin'),
                     // base_path('app/Http/Controllers/Api/V1/Chain'),
